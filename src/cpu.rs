@@ -170,6 +170,7 @@ impl CPU {
                     self.sbc(&opcode.mode);
                 }
 
+<<<<<<< HEAD
                 0x0a | 0x0e | 0x1e | 0x06 | 0x16 => {
                     self.asl(&opcode.mode);
                 }
@@ -186,6 +187,8 @@ impl CPU {
                     self.inc(&opcode.mode);
                 }
 
+=======
+>>>>>>> 6b2dcf5379f306506b67f497241bf1d793d302d3
                 0x48 => self.pha(),
                 0x08 => self.php(),
                 0x68 => self.pla(),
@@ -199,12 +202,19 @@ impl CPU {
                 0xca => self.dex(),
                 0x88 => self.dey(),
                 0xe8 => self.inx(),
+<<<<<<< HEAD
                 0xc8 => self.iny(),
                 0xea => { continue; }
                 // 0x40 => self.rti(),
                 0x00 => {
                     self.brk();
                     return;
+=======
+                // 0x40 => self.rti(),
+                0x00 => {
+                    self.brk();
+                    return
+>>>>>>> 6b2dcf5379f306506b67f497241bf1d793d302d3
                 }
                 _ => todo!(),
             }
@@ -353,6 +363,7 @@ impl CPU {
         self.stack_push(self.clone_status(false).bits());
     }
 
+<<<<<<< HEAD
     fn asl(&mut self, mode: &AddressingMode) {
         let value = match mode {
             AddressingMode::None => self.register_a,
@@ -371,6 +382,8 @@ impl CPU {
         self.set_register_a(value >> 1);
     }
 
+=======
+>>>>>>> 6b2dcf5379f306506b67f497241bf1d793d302d3
     fn clone_status(&self, b: bool) -> CPUFlags {
         let mut status = self.status.clone();
         status.insert(CPUFlags::EXPANSION);
@@ -567,6 +580,7 @@ mod test {
         assert_eq!(cpu.register_a, 0xfa);
     }
 
+<<<<<<< HEAD
     // LDA
     #[test]
     fn test_0xa9_lda_immediate() {
@@ -682,10 +696,15 @@ mod test {
     // LDX
     #[test]
     fn test_0xa2_ldx_immediate() {
+=======
+    #[test]
+    fn test_0xa2_ldx_immediate_load_data() {
+>>>>>>> 6b2dcf5379f306506b67f497241bf1d793d302d3
         let mut cpu = CPU::new();
 
         cpu.load_and_run(vec![0xa2, 0x05, 0x00]);
         assert_eq!(cpu.register_x, 0x05);
+<<<<<<< HEAD
         assert!(cpu.status.bits() & 0b0000_0010 == 0b00);
         assert!(cpu.status.bits() & 0b1000_0000 == 0);
     }
@@ -739,6 +758,14 @@ mod test {
     // LDY
     #[test]
     fn test_0xa0_ldy_immediate() {
+=======
+        assert!(cpu.status.bits & 0b0000_0010 == 0b00);
+        assert!(cpu.status.bits & 0b1000_0000 == 0);
+    }
+
+    #[test]
+    fn test_0xa0_ldy_immediate_load_data() {
+>>>>>>> 6b2dcf5379f306506b67f497241bf1d793d302d3
         let mut cpu = CPU::new();
 
         cpu.load_and_run(vec![0xa0, 0x05, 0x00]);
@@ -748,6 +775,7 @@ mod test {
     }
 
     #[test]
+<<<<<<< HEAD
     fn test_0xa4_ldy_zero_page() {
         let mut cpu = CPU::new();
 
@@ -760,17 +788,25 @@ mod test {
 
     #[test]
     fn test_0xb4_ldy_zero_page_x() {
+=======
+    fn test_0xb4_ldy_zero_x_load_data() {
+>>>>>>> 6b2dcf5379f306506b67f497241bf1d793d302d3
         let mut cpu = CPU::new();
 
         cpu.load(vec![0xb4, 0x00]);
         cpu.reset();
+<<<<<<< HEAD
         cpu.register_x = 0x10;
         cpu.mem_write(0x10, 0x07);
+=======
+        cpu.register_x = 0x07;
+>>>>>>> 6b2dcf5379f306506b67f497241bf1d793d302d3
         cpu.run();
         assert_eq!(cpu.register_y, 0x07);
     }
 
     #[test]
+<<<<<<< HEAD
     fn test_0xac_ldy_absolute() {
         let mut cpu = CPU::new();
 
@@ -1280,5 +1316,16 @@ mod test {
         cpu.run();
 
         assert_eq!(cpu.mem_read(0x75), 0x31);
+=======
+    fn test_0xb6_ldx_zero_y_load_data() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0xb6, 0x00]);
+        cpu.reset();
+        cpu.register_y = 0x10;
+        cpu.mem_write(0x10, 0x12);
+        cpu.run();
+        assert_eq!(cpu.register_x, 0x12);
+>>>>>>> 6b2dcf5379f306506b67f497241bf1d793d302d3
     }
 }
