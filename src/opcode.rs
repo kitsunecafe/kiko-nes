@@ -41,10 +41,10 @@ lazy_static!(
         OpCode::new(0x40, "RTI", 1, 6, AddressingMode::None),
         OpCode::new(0xEA, "NOP", 1, 2, AddressingMode::None),
 
-        OpCode::new(0xce, "INC", 3, 6, AddressingMode::Absolute),
-        OpCode::new(0xde, "INC", 3, 7, AddressingMode::AbsoluteX),
-        OpCode::new(0xc6, "INC", 2, 5, AddressingMode::ZeroPage),
-        OpCode::new(0xd6, "INC", 2, 6, AddressingMode::ZeroPageX),
+        OpCode::new(0xce, "DEC", 3, 6, AddressingMode::Absolute),
+        OpCode::new(0xde, "DEC", 3, 7, AddressingMode::AbsoluteX),
+        OpCode::new(0xc6, "DEC", 2, 5, AddressingMode::ZeroPage),
+        OpCode::new(0xd6, "DEC", 2, 6, AddressingMode::ZeroPageX),
 
         OpCode::new(0xee, "INC", 3, 6, AddressingMode::Absolute),
         OpCode::new(0xfe, "INC", 3, 7, AddressingMode::AbsoluteX),
@@ -65,6 +65,23 @@ lazy_static!(
         OpCode::new(0x1e, "ASL", 3, 7, AddressingMode::AbsoluteX),
         OpCode::new(0x06, "ASL", 2, 5, AddressingMode::ZeroPage),
         OpCode::new(0x16, "ASL", 2, 6, AddressingMode::ZeroPageX),
+
+        OpCode::new(0xc9, "CMP", 2, 2, AddressingMode::Immediate),
+        OpCode::new(0xcd, "CMP", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0xd9, "CMP", 3, 4, AddressingMode::AbsoluteX),
+        OpCode::new(0xd9, "CMP", 3, 4, AddressingMode::AbsoluteY),
+        OpCode::new(0xc5, "CMP", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0xd5, "CMP", 2, 4, AddressingMode::ZeroPageX),
+        OpCode::new(0xc1, "CMP", 2, 6, AddressingMode::IndirectX),
+        OpCode::new(0xd1, "CMP", 2, 5, AddressingMode::IndirectY),
+
+        OpCode::new(0xe0, "CPX", 2, 2, AddressingMode::Immediate),
+        OpCode::new(0xec, "CPX", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0xe4, "CPX", 2, 3, AddressingMode::ZeroPage),
+
+        OpCode::new(0xc0, "CPY", 2, 2, AddressingMode::Immediate),
+        OpCode::new(0xcc, "CPY", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0xc4, "CPY", 2, 3, AddressingMode::ZeroPage),
 
         OpCode::new(0x4a, "LSR", 1, 2, AddressingMode::None),
         OpCode::new(0x4e, "LSR", 3, 6, AddressingMode::Absolute),
@@ -101,6 +118,18 @@ lazy_static!(
         OpCode::new(0xb4, "LDY", 2, 4, AddressingMode::ZeroPageX),
         OpCode::new(0xac, "LDY", 3, 4, AddressingMode::Absolute),
         OpCode::new(0xbc, "LDY", 3, 4, AddressingMode::AbsoluteX),
+        
+        OpCode::new(0x2a, "ROL", 1, 2, AddressingMode::None),
+        OpCode::new(0x2e, "ROL", 3, 6, AddressingMode::Absolute),
+        OpCode::new(0x3e, "ROL", 3, 7, AddressingMode::AbsoluteX),
+        OpCode::new(0x26, "ROL", 2, 5, AddressingMode::ZeroPage),
+        OpCode::new(0x36, "ROL", 2, 6, AddressingMode::ZeroPageX),
+
+        OpCode::new(0x6a, "ROR", 1, 2, AddressingMode::None),
+        OpCode::new(0x6e, "ROR", 3, 6, AddressingMode::Absolute),
+        OpCode::new(0x7e, "ROR", 3, 7, AddressingMode::AbsoluteX),
+        OpCode::new(0x66, "ROR", 2, 5, AddressingMode::ZeroPage),
+        OpCode::new(0x76, "ROR", 2, 6, AddressingMode::ZeroPageX),
 
         OpCode::new(0x85, "STA", 2, 3, AddressingMode::ZeroPage),
         OpCode::new(0x95, "STA", 2, 4, AddressingMode::ZeroPageX),

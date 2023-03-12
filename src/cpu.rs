@@ -168,12 +168,36 @@ impl CPU {
                     self.sbc(&opcode.mode);
                 }
 
-                0x0a | 0x0e | 0x1e | 0x06 | 0x16 => {
+                0x0a => {
+                    self.asl_a();
+                }
+
+                0x0e | 0x1e | 0x06 | 0x16 => {
                     self.asl(&opcode.mode);
                 }
 
-                0x4a | 0x4e | 0x5e | 0x46 | 0x56 => {
+                0x4a => {
+                    self.lsr_a();
+                }
+
+                0x4e | 0x5e | 0x46 | 0x56 => {
                     self.lsr(&opcode.mode);
+                }
+
+                0x2a => {
+                    self.rol_a();
+                }
+
+                0x2e | 0x3e | 0x26 | 0x36 => {
+                    self.rol(&opcode.mode);
+                }
+
+                0x6a => {
+                    self.ror_a();
+                }
+
+                0x6e | 0x7e | 0x66 | 0x76 => {
+                    self.ror(&opcode.mode);
                 }
 
                 0xce | 0xde | 0xc6 | 0xd6 => {
@@ -182,6 +206,18 @@ impl CPU {
 
                 0xee | 0xfe | 0xe6 | 0xf6 => {
                     self.inc(&opcode.mode);
+                }
+
+                0xc9 | 0xcd | 0xdd | 0xd9 | 0xc5 | 0xd5 | 0xc1 | 0xd1 => {
+                    self.compare(&opcode.mode, self.register_a);
+                }
+
+                0xe0 | 0xec | 0xe4 => {
+                    self.compare(&opcode.mode, self.register_x);
+                }
+
+                0xc0 | 0xcc | 0xc4 => {
+                    self.compare(&opcode.mode, self.register_y);
                 }
 
                 0x48 => self.pha(),
@@ -198,7 +234,9 @@ impl CPU {
                 0x88 => self.dey(),
                 0xe8 => self.inx(),
                 0xc8 => self.iny(),
-                0xea => { continue; }
+                0xea => {
+                    continue;
+                }
                 // 0x40 => self.rti(),
                 0x00 => {
                     self.brk();
@@ -256,7 +294,7 @@ impl CPU {
 
     fn txs(&mut self) {
         self.stack_pointer = self.register_x;
-        // self.update_zero_and_set_negative_flags(self.register_a);
+        self.update_zero_and_set_negative_flags(self.register_a);
     }
 
     fn tya(&mut self) {
@@ -265,7 +303,6 @@ impl CPU {
     }
 
     fn dec(&mut self, mode: &AddressingMode) {
-        panic!("Fix dec/dex/dey/inc/inx/iny so they set N/Z flags");
         let addr = self.get_operand_addressing(mode);
         let value = self.mem_read(addr);
         self.mem_write(addr, value.wrapping_sub(1));
@@ -351,22 +388,150 @@ impl CPU {
         self.stack_push(self.clone_status(false).bits());
     }
 
-    fn asl(&mut self, mode: &AddressingMode) {
-        let value = match mode {
-            AddressingMode::None => self.register_a,
-            _ => self.read_value_from_memory(mode)
-        };
+    fn asl_a(&mut self) {
+        let value = self.register_a;
+
+        if value >> 7 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.remove_carry_flag();
+        }
 
         self.set_register_a(value << 1);
     }
 
-    fn lsr(&mut self, mode: &AddressingMode) {
-        let value = match mode {
-            AddressingMode::None => self.register_a,
-            _ => self.read_value_from_memory(mode)
-        };
+    fn asl(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_addressing(mode);
+        let mut value = self.mem_read(addr);
+
+        if value >> 7 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.remove_carry_flag();
+        }
+
+        value = value << 1;
+        self.mem_write(addr, value);
+        self.update_zero_and_set_negative_flags(value);
+    }
+
+    fn lsr_a(&mut self) {
+        let value = self.register_a;
+
+        if value & 1 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.remove_carry_flag();
+        }
 
         self.set_register_a(value >> 1);
+    }
+
+    fn lsr(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_addressing(mode);
+        let mut value = self.mem_read(addr);
+
+        if value & 1 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.remove_carry_flag();
+        }
+
+        value = value >> 1;
+        self.mem_write(addr, value);
+        self.set_register_a(value);
+    }
+
+    fn rol_a(&mut self) {
+        let mut value = self.register_a;
+        let carry = self.status.contains(CPUFlags::CARRY);
+
+        if value >> 7 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.remove_carry_flag();
+        }
+
+        value = value << 1;
+
+        if carry {
+            value = value | 1;
+        }
+
+        self.set_register_a(value);
+    }
+
+    fn rol(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_addressing(mode);
+        let mut value = self.mem_read(addr);
+        let carry = self.status.contains(CPUFlags::CARRY);
+
+        if value >> 7 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.remove_carry_flag();
+        }
+
+        value = value << 1;
+
+        if carry {
+            value = value | 1;
+        }
+
+        self.mem_write(addr, value);
+        self.update_zero_and_set_negative_flags(value);
+    }
+
+    fn ror_a(&mut self) {
+        let mut value = self.register_a;
+        let carry = self.status.contains(CPUFlags::CARRY);
+
+        if value & 1 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.remove_carry_flag();
+        }
+
+        value = value >> 1;
+
+        if carry {
+            value = value | 0b1000_0000;
+        }
+
+        self.set_register_a(value);
+    }
+
+    fn ror(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_addressing(mode);
+        let mut value = self.mem_read(addr);
+        let carry = self.status.contains(CPUFlags::CARRY);
+
+        if value & 1 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.remove_carry_flag();
+        }
+
+        value = value >> 1;
+
+        if carry {
+            value = value | 0b1000_0000;
+        }
+
+        self.set_register_a(value);
+    }
+
+    fn compare(&mut self, mode: &AddressingMode, other: u8) {
+        let addr = self.get_operand_addressing(mode);
+        let memory = self.mem_read(addr);
+
+        if memory <= other {
+            self.set_carry_flag();
+        } else {
+            self.remove_carry_flag();
+        }
+
+        self.update_zero_and_set_negative_flags(other.wrapping_sub(memory));
     }
 
     fn clone_status(&self, b: bool) -> CPUFlags {
@@ -378,6 +543,14 @@ impl CPU {
         }
 
         status
+    }
+
+    fn set_carry_flag(&mut self) {
+        self.status.insert(CPUFlags::CARRY);
+    }
+
+    fn remove_carry_flag(&mut self) {
+        self.status.remove(CPUFlags::CARRY);
     }
 
     fn add_to_register_a(&mut self, data: u8) {
@@ -1070,7 +1243,21 @@ mod test {
         cpu.register_a = 0x02;
         cpu.run();
 
+        assert!(!cpu.status.contains(CPUFlags::CARRY));
         assert_eq!(cpu.register_a, 4);
+    }
+
+    #[test]
+    fn test_0x0a_asl_accumulator_overflow() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0x0a, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0xff;
+        cpu.run();
+
+        assert!(cpu.status.contains(CPUFlags::CARRY));
+        assert_eq!(cpu.register_a, 0xfe);
     }
 
     #[test]
@@ -1082,7 +1269,7 @@ mod test {
         cpu.mem_write(0x1002, 0x04);
         cpu.run();
 
-        assert_eq!(cpu.register_a, 8);
+        assert_eq!(cpu.mem_read(0x1002), 8);
     }
 
     #[test]
@@ -1095,7 +1282,7 @@ mod test {
         cpu.mem_write(0x1016, 8);
         cpu.run();
 
-        assert_eq!(cpu.register_a, 16);
+        assert_eq!(cpu.mem_read(0x1016), 16);
     }
 
     #[test]
@@ -1107,7 +1294,7 @@ mod test {
         cpu.mem_write(0x001e, 16);
         cpu.run();
 
-        assert_eq!(cpu.register_a, 32);
+        assert_eq!(cpu.mem_read(0x001e), 32);
     }
 
     #[test]
@@ -1120,7 +1307,7 @@ mod test {
         cpu.mem_write(0x002e, 32);
         cpu.run();
 
-        assert_eq!(cpu.register_a, 64);
+        assert_eq!(cpu.mem_read(0x2e), 64);
     }
 
     #[test]
@@ -1132,7 +1319,21 @@ mod test {
         cpu.register_a = 64;
         cpu.run();
 
+        assert!(!cpu.status.contains(CPUFlags::CARRY));
         assert_eq!(cpu.register_a, 32);
+    }
+
+    #[test]
+    fn test_0x4a_lsr_accumulator_overflow() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0x4a, 0x00]);
+        cpu.reset();
+        cpu.register_a = 255;
+        cpu.run();
+
+        assert!(cpu.status.contains(CPUFlags::CARRY));
+        assert_eq!(cpu.register_a, 127);
     }
 
     #[test]
@@ -1144,7 +1345,20 @@ mod test {
         cpu.mem_write(0x102e, 32);
         cpu.run();
 
-        assert_eq!(cpu.register_a, 16);
+        assert_eq!(cpu.mem_read(0x102e), 16);
+    }
+
+    #[test]
+    fn test_0x4e_lsr_absolute_overflow() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0x4e, 0x2e, 0x10, 0x00]);
+        cpu.reset();
+        cpu.mem_write(0x102e, 0x01);
+        cpu.run();
+
+        assert!(cpu.status.contains(CPUFlags::CARRY));
+        assert_eq!(cpu.mem_read(0x102e), 0);
     }
 
     #[test]
@@ -1157,7 +1371,7 @@ mod test {
         cpu.mem_write(0x107a, 8);
         cpu.run();
 
-        assert_eq!(cpu.register_a, 4);
+        assert_eq!(cpu.mem_read(0x107a), 4);
     }
 
     #[test]
@@ -1166,10 +1380,10 @@ mod test {
 
         cpu.load(vec![0x46, 0x66, 0x00]);
         cpu.reset();
-        cpu.mem_write(0x0066, 4);
+        cpu.mem_write(0x66, 4);
         cpu.run();
 
-        assert_eq!(cpu.register_a, 2);
+        assert_eq!(cpu.mem_read(0x66), 2);
     }
 
     #[test]
@@ -1182,7 +1396,7 @@ mod test {
         cpu.mem_write(0x0043, 2);
         cpu.run();
 
-        assert_eq!(cpu.register_a, 1);
+        assert_eq!(cpu.mem_read(0x43), 1);
     }
 
     #[test]
@@ -1278,5 +1492,171 @@ mod test {
         cpu.run();
 
         assert_eq!(cpu.mem_read(0x75), 0x31);
+    }
+
+    #[test]
+    fn test_0xc9_cmp_immediate_positive() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0xc9, 10, 0x00]);
+        cpu.reset();
+        cpu.register_a = 15;
+        cpu.run();
+
+        assert!(cpu.status.contains(CPUFlags::CARRY));
+        assert!(!cpu.status.contains(CPUFlags::NEGATIVE));
+        assert!(!cpu.status.contains(CPUFlags::ZERO));
+    }
+
+    #[test]
+    fn test_0xc9_cmp_immediate_negative() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0xc9, 15, 0x00]);
+        cpu.reset();
+        cpu.register_a = 10;
+        cpu.run();
+
+        assert!(!cpu.status.contains(CPUFlags::CARRY));
+        assert!(cpu.status.contains(CPUFlags::NEGATIVE));
+        assert!(!cpu.status.contains(CPUFlags::ZERO));
+    }
+
+    #[test]
+    fn test_0xc9_cmp_immediate_zero() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0xc9, 15, 0x00]);
+        cpu.reset();
+        cpu.register_a = 15;
+        cpu.run();
+
+        assert!(cpu.status.contains(CPUFlags::CARRY));
+        assert!(!cpu.status.contains(CPUFlags::NEGATIVE));
+        assert!(cpu.status.contains(CPUFlags::ZERO));
+    }
+
+    #[test]
+    fn test_0xc9_cmp_immediate_overflow() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0xc9, 0x15, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0xff;
+        cpu.run();
+
+        assert!(cpu.status.contains(CPUFlags::CARRY));
+        assert!(cpu.status.contains(CPUFlags::NEGATIVE));
+        assert!(!cpu.status.contains(CPUFlags::ZERO));
+    }
+
+    #[test]
+    fn test_0xe0_cpx_immediate_positive() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0xe0, 10, 0x00]);
+        cpu.reset();
+        cpu.register_x = 15;
+        cpu.run();
+
+        assert!(cpu.status.contains(CPUFlags::CARRY));
+        assert!(!cpu.status.contains(CPUFlags::NEGATIVE));
+        assert!(!cpu.status.contains(CPUFlags::ZERO));
+    }
+
+    #[test]
+    fn test_0xe0_cpx_immediate_negative() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0xe0, 10, 0x00]);
+        cpu.reset();
+        cpu.register_x = 5;
+        cpu.run();
+
+        assert!(!cpu.status.contains(CPUFlags::CARRY));
+        assert!(cpu.status.contains(CPUFlags::NEGATIVE));
+        assert!(!cpu.status.contains(CPUFlags::ZERO));
+    }
+
+    #[test]
+    fn test_0xe0_cpx_immediate_zero() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0xe0, 5, 0x00]);
+        cpu.reset();
+        cpu.register_x = 5;
+        cpu.run();
+
+        assert!(cpu.status.contains(CPUFlags::CARRY));
+        assert!(!cpu.status.contains(CPUFlags::NEGATIVE));
+        assert!(cpu.status.contains(CPUFlags::ZERO));
+    }
+
+    #[test]
+    fn test_0xc0_cpy_immediate_positive() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0xc0, 10, 0x00]);
+        cpu.reset();
+        cpu.register_y = 15;
+        cpu.run();
+
+        assert!(cpu.status.contains(CPUFlags::CARRY));
+        assert!(!cpu.status.contains(CPUFlags::NEGATIVE));
+        assert!(!cpu.status.contains(CPUFlags::ZERO));
+    }
+
+    #[test]
+    fn test_0xc0_cpy_immediate_negative() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0xc0, 10, 0x00]);
+        cpu.reset();
+        cpu.register_y = 5;
+        cpu.run();
+
+        assert!(!cpu.status.contains(CPUFlags::CARRY));
+        assert!(cpu.status.contains(CPUFlags::NEGATIVE));
+        assert!(!cpu.status.contains(CPUFlags::ZERO));
+    }
+
+    #[test]
+    fn test_0xc0_cpy_immediate_zero() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0xc0, 5, 0x00]);
+        cpu.reset();
+        cpu.register_y = 5;
+        cpu.run();
+
+        assert!(cpu.status.contains(CPUFlags::CARRY));
+        assert!(!cpu.status.contains(CPUFlags::NEGATIVE));
+        assert!(cpu.status.contains(CPUFlags::ZERO));
+    }
+
+    #[test]
+    fn test_0x2a_rol_accumulator() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0x2a, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0xff;
+        cpu.run();
+    
+        assert!(cpu.status.contains(CPUFlags::CARRY));
+        assert_eq!(cpu.register_a, 0xfe);
+    }
+
+    #[test]
+    fn test_0x6a_ror_accumulator() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0x6a, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0xff;
+        cpu.run();
+    
+        assert!(cpu.status.contains(CPUFlags::CARRY));
+        assert_eq!(cpu.register_a, 0x7f);
     }
 }
