@@ -220,6 +220,14 @@ impl CPU {
                     self.compare(&opcode.mode, self.register_y);
                 }
 
+                0x4c => {
+                    self.jmp_absolute();
+                }
+
+                0x6c => {
+                    self.jmp_indirect();
+                }
+
                 0x48 => self.pha(),
                 0x08 => self.php(),
                 0x68 => self.pla(),
@@ -532,6 +540,42 @@ impl CPU {
         }
 
         self.update_zero_and_set_negative_flags(other.wrapping_sub(memory));
+    }
+
+    fn and(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_addressing(mode);
+        let value = self.mem_read(addr);
+        self.set_register_a(value);
+    }
+
+    fn bit(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_addressing(mode);
+        let value = self.mem_read(addr);
+        self.update_zero_and_set_negative_flags(value & self.register_a);
+    }
+
+    fn eor(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_addressing(mode);
+        let value = self.mem_read(addr);
+        self.set_register_a(self.register_a ^ value);
+    }
+
+    fn ora(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_addressing(mode);
+        let value = self.mem_read(addr);
+        self.set_register_a(self.register_a | value);
+    }
+
+    // [PC + 1] -> PCL, [PC + 2] -> PCH
+    fn jmp_absolute(&mut self) {
+        self.program_counter = self.mem_read_u16(self.program_counter);
+    }
+
+    fn jmp_indirect(&mut self) {
+        let addr = self.mem_read_u16(self.program_counter);
+        let lo = self.mem_read(addr);
+        let hi = self.mem_read(addr & 0xFF00);
+        self.program_counter = (hi as u16) << 8 | (lo as u16)
     }
 
     fn clone_status(&self, b: bool) -> CPUFlags {
@@ -1658,5 +1702,18 @@ mod test {
     
         assert!(cpu.status.contains(CPUFlags::CARRY));
         assert_eq!(cpu.register_a, 0x7f);
+    }
+
+    #[test]
+    fn test_0x6c_jmp_page_bug() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0x6c, 0xff, 0x30, 0x00]);
+        cpu.reset();
+        cpu.mem_write(0x3000, 0x40);
+        cpu.mem_write(0x30ff, 0x80);
+        cpu.mem_write(0x3100, 0x50);
+        cpu.run();
+        assert_eq!(cpu.program_counter, 0x4081);
     }
 }
