@@ -220,6 +220,22 @@ impl CPU {
                     self.compare(&opcode.mode, self.register_y);
                 }
 
+                0x29 | 0x2d | 0x3d | 0x39 | 0x25 | 0x35 | 0x21 | 0x31 => {
+                    self.and(&opcode.mode);
+                }
+
+                0x2c | 0x24 => {
+                    self.bit(&opcode.mode);
+                }
+
+                0x49 | 0x4d | 0x5d | 0x59 | 0x45 | 0x55 | 0x41 | 0x51 => {
+                    self.eor(&opcode.mode);
+                }
+
+                0x09 | 0x0d | 0x1d | 0x19 | 0x05 | 0x15 | 0x01 | 0x11 => {
+                    self.ora(&opcode.mode);
+                }
+
                 0x4c => {
                     self.jmp_absolute();
                 }
