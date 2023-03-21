@@ -589,9 +589,16 @@ impl CPU {
 
     fn jmp_indirect(&mut self) {
         let addr = self.mem_read_u16(self.program_counter);
-        let lo = self.mem_read(addr);
-        let hi = self.mem_read(addr & 0xFF00);
-        self.program_counter = (hi as u16) << 8 | (lo as u16)
+
+        let indirect_ref = if addr & 0x00ff == 0x00ff {
+            let lo = self.mem_read(addr);
+            let hi = self.mem_read(addr & 0xFF00);
+            (hi as u16) << 8 | (lo as u16)
+        } else {
+            self.mem_read_u16(addr)
+        };
+
+        self.program_counter = indirect_ref;
     }
 
     fn clone_status(&self, b: bool) -> CPUFlags {
@@ -1702,7 +1709,7 @@ mod test {
         cpu.reset();
         cpu.register_a = 0xff;
         cpu.run();
-    
+
         assert!(cpu.status.contains(CPUFlags::CARRY));
         assert_eq!(cpu.register_a, 0xfe);
     }
@@ -1715,7 +1722,7 @@ mod test {
         cpu.reset();
         cpu.register_a = 0xff;
         cpu.run();
-    
+
         assert!(cpu.status.contains(CPUFlags::CARRY));
         assert_eq!(cpu.register_a, 0x7f);
     }
@@ -1728,6 +1735,19 @@ mod test {
         cpu.reset();
         cpu.mem_write(0x3000, 0x40);
         cpu.mem_write(0x30ff, 0x80);
+        cpu.mem_write(0x3100, 0x50);
+        cpu.run();
+        assert_eq!(cpu.program_counter, 0x4081);
+    }
+
+    #[test]
+    fn test_0x6c_jmp() {
+        let mut cpu = CPU::new();
+
+        cpu.load(vec![0x6c, 0xfe, 0x30, 0x00]);
+        cpu.reset();
+        cpu.mem_write(0x30ff, 0x40);
+        cpu.mem_write(0x30fe, 0x80);
         cpu.mem_write(0x3100, 0x50);
         cpu.run();
         assert_eq!(cpu.program_counter, 0x4081);
